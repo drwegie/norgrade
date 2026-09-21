@@ -1,11 +1,26 @@
 /**
  * Classification of SSB's "Region" (fylke) dimension.
  *
- * Norway's county (fylke) boundaries changed twice in the period covered by
- * these tables (2018/2019 regionreformen and the 2024 Trøndelag/Viken
- * de-mergers). SSB keeps every historical code in the API and marks
- * superseded ones with a "(-YYYY)" suffix directly in the category label
- * (e.g. "Østfold (-2019)"). Two codes are not geographic fylker at all:
+ * Norway's county (fylke) boundaries changed during the period these tables
+ * cover. SSB keeps every historical code in the API and marks superseded
+ * ones with a "(-YYYY)" suffix directly in the category label (e.g.
+ * "Østfold (-2019)").
+ *
+ * Measured on table 14882 (2026-09-22): 23 codes, of which 13 carry
+ * "(-2019)", 2 carry "(-2017)", 5 are unsuffixed fylker (Oslo, Rogaland,
+ * Møre og Romsdal, Trøndelag, Nordland), 2 are non-geographic (Svalbard,
+ * Utlandet) and 1 is the national aggregate.
+ *
+ * UNVERIFIED: whether later boundary changes (e.g. the 2024 de-mergers) are
+ * reflected in these labels at all. Our own measurement only shows the
+ * "(-2019)" and "(-2017)" suffixes, so we do not assert anything about 2024.
+ *
+ * WEAKNESS -- this classifier infers "current" from the *absence* of a
+ * suffix. If SSB ever retires a code without suffixing it, a stale region
+ * would silently be classified as current, which is exactly the mixing this
+ * module exists to prevent. Ingest must therefore assert that the set of
+ * codes classified as "current" equals an explicitly enumerated expected
+ * set, and fail loudly on any unknown code. Two codes are not geographic fylker at all:
  * Svalbard (21) has no municipal/fylke government, and Utlandet (25) means
  * "abroad". There is also one aggregate "01-99 I alt" (national total).
  *

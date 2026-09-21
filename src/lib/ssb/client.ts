@@ -23,8 +23,11 @@ export interface FetchTableOptions {
 export function buildTableUrl({ tableId, valueCodes, lang = "en" }: FetchTableOptions): string {
   const params = new URLSearchParams();
   params.set("lang", lang);
-  for (const [dimension, codes] of Object.entries(valueCodes)) {
-    params.set(`valueCodes[${dimension}]`, codes);
+  // Sort dimension names so that logically identical queries produce a
+  // byte-identical URL regardless of object insertion order. The URL is the
+  // cache key, so an unsorted key would silently miss the cache.
+  for (const dimension of Object.keys(valueCodes).sort()) {
+    params.set(`valueCodes[${dimension}]`, valueCodes[dimension]);
   }
   params.set("outputFormat", "json-stat2");
   return `${BASE_URL}/${tableId}/data?${params.toString()}`;

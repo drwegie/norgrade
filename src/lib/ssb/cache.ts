@@ -1,19 +1,23 @@
 /**
  * Process-local cache for parsed SSB responses.
  *
- * SSB's PxWebApi v2 limits requests to 30/minute *per IP address*. On
- * Vercel, serverless functions can share an outbound IP with other
- * tenants, so our own usage plus theirs could exhaust the limit even
- * with light traffic. This app's underlying data (school grades,
- * completion rates) is also only published annually, so aggressively
- * caching is both safe and necessary.
+ * This cache does NOT bound SSB's rate limit, and must not be described as
+ * if it did. SSB's PxWebApi v2 allows 30 requests/minute *per IP address*,
+ * but this cache is scoped to a single warm server process / lambda
+ * instance. Under serverless, each instance holds its own Map, so N
+ * instances can issue up to N times the outbound requests. Worse, the hit
+ * rate is inversely correlated with the load that makes the rate limit
+ * dangerous: when traffic spikes and new instances spin up cold, every one
+ * of them misses -- precisely when we are closest to the limit.
  *
- * This is intentionally a simple in-memory TTL cache, not a distributed
- * one: it's scoped to a single warm server process/lambda instance. That
- * is enough to deduplicate repeated requests within a burst (e.g. several
- * chart panels on one page fetching overlapping tables) and to survive
- * across requests as long as the instance stays warm. A persistent cache
- * (e.g. Supabase, file, or Vercel KV) is out of scope for this increment.
+ * What actually bounds the request rate is the ingest boundary: SSB is only
+ * called from ingest (build/script time), never from the request path, so
+ * the runtime request count is a constant zero. See
+ * docs/adr/ADR-001-ssb-ingest-boundary.md.
+ *
+ * The role of this module is therefore narrow: deduplicating repeated
+ * queries *within a single ingest run*. It is not a rate-limit control and
+ * not a durable cache.
  */
 
 interface CacheEntry<T> {

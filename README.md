@@ -42,10 +42,19 @@ eliminable dimensions left out of the query (e.g. `Kjonn`, `Poeng`,
 `ForeldrUtd`, `Region`) come back pre-aggregated to their total, not omitted.
 
 SSB enforces a rate limit of **30 requests/minute per IP address** and an
-**800,000-data-cell** limit per extract. Because this could run behind a
-shared outbound IP (e.g. Vercel), all table fetches go through a
-process-local cache (`src/lib/ssb/cache.ts`) to avoid re-fetching the same
-query within its TTL.
+**800,000-data-cell** limit per extract. This app could run behind a shared
+outbound IP (e.g. Vercel), so our own usage would be counted together with
+other tenants'.
+
+The way this app stays inside that limit is **not** caching. A
+process-local cache cannot bound a per-IP rate under serverless, where each
+instance keeps its own memory. Instead, **SSB is only called from ingest
+(build/script time) and never from the request path**, so the number of SSB
+requests made while serving a page is a constant zero. The data is published
+annually and the whole dataset is four requests, which makes this cheap.
+`src/lib/ssb/cache.ts` only deduplicates repeated queries within a single
+ingest run; it is not a rate-limit control. See
+[ADR-001](docs/adr/ADR-001-ssb-ingest-boundary.md).
 
 ### Attribution (CC BY 4.0)
 
