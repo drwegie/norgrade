@@ -96,4 +96,104 @@ describe("parseJsonStat2", () => {
 
     expect(() => parseJsonStat2("x", broken)).toThrow(/Unrecognized SSB status code/);
   });
+
+  it("decodes a two-dimensional flat index in row-major order (last dimension fastest)", () => {
+    // Region has 3 categories (object-map index, intentionally listed out of
+    // order to exercise the sort-by-position branch), Kjonn has 2 categories
+    // given as a plain array (the other supported `index` shape). Region is
+    // dimension 0 (slow-varying), Kjonn is dimension 1 (fast-varying), so the
+    // expected flat layout is: (01,0) (01,1) (02,0) (02,1) (03,0) (03,1).
+    const raw: JsonStat2Dataset = {
+      id: ["Region", "Kjonn"],
+      size: [3, 2],
+      dimension: {
+        Region: {
+          category: { index: { "03": 2, "01": 0, "02": 1 } },
+        },
+        Kjonn: {
+          category: { index: ["0", "1"] },
+        },
+      },
+      value: [10, 11, 20, 21, 30, 31],
+    };
+
+    const table = parseJsonStat2("multi-dim", raw);
+
+    expect(table.cells).toHaveLength(6);
+    // Spot-check a cell in the middle of the grid, not just the edges.
+    expect(table.cells[3]).toEqual({
+      coordinates: { Region: "02", Kjonn: "1" },
+      cell: { kind: "value", value: 21 },
+    });
+    expect(table.cells.map((c) => (c.cell as { value: number }).value)).toEqual([
+      10, 11, 20, 21, 30, 31,
+    ]);
+    expect(table.cells.map((c) => c.coordinates)).toEqual([
+      { Region: "01", Kjonn: "0" },
+      { Region: "01", Kjonn: "1" },
+      { Region: "02", Kjonn: "0" },
+      { Region: "02", Kjonn: "1" },
+      { Region: "03", Kjonn: "0" },
+      { Region: "03", Kjonn: "1" },
+    ]);
+  });
+
+  it("accepts status as a full array parallel to value (the other json-stat2 status shape)", () => {
+    const raw: JsonStat2Dataset = {
+      id: ["Region"],
+      size: [2],
+      dimension: { Region: { category: { index: ["01", "02"] } } },
+      value: [null, 5],
+      status: [".", undefined as unknown as string],
+    };
+
+    const table = parseJsonStat2("array-status", raw);
+
+    expect(table.cells[0].cell).toEqual({ kind: "not-applicable" });
+    expect(table.cells[1].cell).toEqual({ kind: "value", value: 5 });
+  });
+
+  it("accepts status as a single string applying to every cell", () => {
+    const raw: JsonStat2Dataset = {
+      id: ["Region"],
+      size: [2],
+      dimension: { Region: { category: { index: ["01", "02"] } } },
+      value: [null, null],
+      status: ":",
+    };
+
+    const table = parseJsonStat2("string-status", raw);
+
+    expect(table.cells.map((c) => c.cell)).toEqual([
+      { kind: "confidential" },
+      { kind: "confidential" },
+    ]);
+  });
+
+  // KNOWN DEFECT (see test report): the comment on `categoryCodesInOrder`
+  // claims the final fallback (dimension has neither an `index` nor a
+  // `label` map, i.e. a single implicit category) uses "the dimension name
+  // itself". The function's signature never receives the dimension name
+  // (`dimName`), so it cannot actually do that -- it instead falls back to
+  // `Object.keys(dim.category)[0]`, which are the *keys of the category
+  // object itself* ("index"/"label"), not a data-derived code. With an
+  // empty `category: {}` (as SSB would send for a single-category
+  // dimension with no index and no label), `Object.keys({})` is `[]`, so
+  // the code silently becomes an empty string instead of anything
+  // resembling the dimension name. This test pins the *current* (buggy)
+  // behavior so a future fix is a deliberate, visible change rather than a
+  // silent one -- it is not an endorsement of the empty-string code.
+  it("falls back to an empty-string category code (not the dimension name) when a dimension has neither index nor label", () => {
+    const raw: JsonStat2Dataset = {
+      id: ["Mystery"],
+      size: [1],
+      dimension: { Mystery: { category: {} } },
+      value: [42],
+    };
+
+    const table = parseJsonStat2("no-index-no-label", raw);
+
+    expect(table.dimensions.Mystery.categories).toEqual([{ code: "", label: "" }]);
+    expect(table.cells[0].coordinates).toEqual({ Mystery: "" });
+  });
 });

@@ -85,4 +85,56 @@ describe("fetchTable", () => {
     await expect(fetchTable(options)).rejects.toThrow(/429/);
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
+
+  it("does not collide in the cache when only valueCodes differ (same tableId)", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      json: async () => normalFixture,
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const optionsBothSexes = {
+      tableId: "11689",
+      valueCodes: { Tid: "2024", Kjonn: "0", ContentsCode: "Elever" },
+    };
+    const optionsMalesOnly = {
+      tableId: "11689",
+      valueCodes: { Tid: "2024", Kjonn: "1", ContentsCode: "Elever" },
+    };
+
+    await fetchTable(optionsBothSexes);
+    await fetchTable(optionsMalesOnly);
+    // Repeating the first query should now be a cache hit, not a third fetch.
+    await fetchTable(optionsBothSexes);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const [firstUrl] = fetchMock.mock.calls[0];
+    const [secondUrl] = fetchMock.mock.calls[1];
+    expect(firstUrl).not.toBe(secondUrl);
+  });
+
+  it("propagates the parser's error (and does not cache) when the response has an unrecognized status code", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      json: async () => ({
+        id: ["Tid"],
+        size: [1],
+        dimension: { Tid: { category: { index: ["2024"] } } },
+        value: [null],
+        status: { "0": "?" },
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const options = { tableId: "x", valueCodes: { Tid: "2024" } };
+
+    await expect(fetchTable(options)).rejects.toThrow(/Unrecognized SSB status code/);
+    // Not cached: a retry must hit the network again, not return stale/partial data.
+    await expect(fetchTable(options)).rejects.toThrow(/Unrecognized SSB status code/);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 });
