@@ -1,0 +1,35 @@
+{
+  "_fixtureNote": "The value/status pairing here (value: null at flat index 0 with status: {\"0\": \".\"} for Svalbard) is taken directly from the task spec, which describes it as an actually-observed response shape for table 14882's Region=21 (Svalbard) cell -- Svalbard has no upper secondary school completion-rate statistic because it has no municipal school administration, hence 'Category not applicable' rather than 'Confidential'. The surrounding Oslo value and other metadata are reconstructed to match SSB's documented json-stat2 shape, since the harness this fixture was written in has no network access to capture the full byte-for-byte payload.",
+  "version": "2.0",
+  "class": "dataset",
+  "label": "Upper secondary school completion rate within 5 years, by region 2023",
+  "source": "Statistics Norway",
+  "updated": "2024-06-13T07:00:00Z",
+  "id": ["Region", "Tid", "ContentsCode"],
+  "size": [2, 1, 1],
+  "dimension": {
+    "Region": {
+      "label": "region",
+      "category": {
+        "index": { "21": 0, "03": 1 },
+        "label": { "21": "Svalbard", "03": "Oslo" }
+      }
+    },
+    "Tid": {
+      "label": "year",
+      "category": {
+        "index": { "2023": 0 },
+        "label": { "2023": "2023" }
+      }
+    },
+    "ContentsCode": {
+      "label": "contents",
+      "category": {
+        "index": { "FullfortAndel": 0 },
+        "label": { "FullfortAndel": "Completion rate (%)" }
+      }
+    }
+  },
+  "value": [null, 79.4],
+  "status": { "0": "." }
+}

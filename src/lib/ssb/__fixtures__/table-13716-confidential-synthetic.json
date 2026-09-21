@@ -1,0 +1,38 @@
+{
+  "_fixtureNote": "SYNTHETIC. Not captured from a live call (the harness this fixture was written in has no network access, and the task spec explicitly notes ':' was not observed in the responses it verified). Constructed to match SSB's documented json-stat2 status-code legend (':' = Confidential, suppressed to avoid identifying individuals) for a small household-income bracket, so the parser must not assume this code path is unreachable.",
+  "version": "2.0",
+  "class": "dataset",
+  "label": "Grade points by household income bracket 2024",
+  "source": "Statistics Norway",
+  "updated": "2025-01-16T07:00:00Z",
+  "id": ["Husholdningsinntekt", "Tid", "ContentsCode"],
+  "size": [2, 1, 1],
+  "dimension": {
+    "Husholdningsinntekt": {
+      "label": "household income",
+      "category": {
+        "index": { "10000000+": 0, "0-149999": 1 },
+        "label": {
+          "10000000+": "10 000 000 NOK or more",
+          "0-149999": "0 - 149 999 NOK"
+        }
+      }
+    },
+    "Tid": {
+      "label": "year",
+      "category": {
+        "index": { "2024": 0 },
+        "label": { "2024": "2024" }
+      }
+    },
+    "ContentsCode": {
+      "label": "contents",
+      "category": {
+        "index": { "Grunnskolepoeng": 0 },
+        "label": { "Grunnskolepoeng": "Average grade points" }
+      }
+    }
+  },
+  "value": [null, 38.2],
+  "status": { "0": ":" }
+}
