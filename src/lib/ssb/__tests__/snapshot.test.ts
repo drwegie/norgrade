@@ -5,13 +5,15 @@
  * two halves of the on-disk format, written on opposite sides of the ADR-001
  * boundary: ingest writes, the request path reads. The property that matters
  * is that the read side reconstructs exactly what the write side had --
- * including the three special values and, critically, the coordinates, which
- * are not stored and have to be rebuilt from the layout convention.
+ * including the three special values and, critically, the cell *order*,
+ * since a cell's coordinates are nothing but its position in that order
+ * (src/lib/ssb/layout.ts).
  */
 import { describe, expect, it } from "vitest";
 import { serializeSnapshot } from "../../../../scripts/ingest-core";
 import { decodeSnapshot } from "../snapshot";
 import { parseJsonStat2, type JsonStat2Dataset } from "../parser";
+import { selectCell } from "../select";
 import type { ParsedTable } from "../types";
 
 import normalFixture from "../__fixtures__/table-11689-normal.json";
@@ -28,6 +30,8 @@ function roundTrip(table: ParsedTable): ParsedTable {
  * A three-dimensional table covering all four cell kinds. Built by hand
  * rather than from a fixture so that the special values sit at known
  * coordinates, which is what makes a coordinate shift detectable.
+ * Asymmetric on purpose (2 x 2 x 3): a transposed layout would survive a
+ * square one.
  */
 function buildMixedTable(): ParsedTable {
   const dimensionOrder = ["Kjonn", "ForeldrUtd", "Tid"];
@@ -50,7 +54,7 @@ function buildMixedTable(): ParsedTable {
     },
   };
 
-  const kinds: ParsedTable["cells"][number]["cell"][] = [
+  const cells: ParsedTable["cells"] = [
     { kind: "value", value: 1.5 },
     { kind: "not-applicable" },
     { kind: "not-available" },
@@ -64,20 +68,6 @@ function buildMixedTable(): ParsedTable {
     { kind: "confidential" },
     { kind: "value", value: 14 },
   ];
-
-  const cells: ParsedTable["cells"] = [];
-  let flatIndex = 0;
-  for (const sex of dimensions.Kjonn.categories) {
-    for (const education of dimensions.ForeldrUtd.categories) {
-      for (const year of dimensions.Tid.categories) {
-        cells.push({
-          coordinates: { Kjonn: sex.code, ForeldrUtd: education.code, Tid: year.code },
-          cell: kinds[flatIndex],
-        });
-        flatIndex++;
-      }
-    }
-  }
 
   return { tableId: "mixed", dimensionOrder, dimensions, cells };
 }
@@ -102,9 +92,13 @@ describe("decodeSnapshot", () => {
     );
     const decoded = roundTrip(table);
 
-    const svalbard = decoded.cells.find((c) => c.coordinates.Region === "21");
-    expect(svalbard?.cell).toEqual({ kind: "not-applicable" });
-    expect(svalbard?.cell).not.toEqual({ kind: "value", value: 0 });
+    const svalbard = selectCell(decoded, {
+      Region: "21",
+      Tid: "2023",
+      ContentsCode: "FullfortAndel",
+    });
+    expect(svalbard).toEqual({ kind: "not-applicable" });
+    expect(svalbard).not.toEqual({ kind: "value", value: 0 });
   });
 
   it("decodes the committed snapshot of table 11689", () => {
@@ -116,13 +110,15 @@ describe("decodeSnapshot", () => {
       table.dimensionOrder.reduce((n, d) => n * table.dimensions[d].categories.length, 1),
     );
     // Row-major means the first cell is the first category of every dimension.
-    expect(table.cells[0].coordinates).toEqual({
-      Kjonn: "0",
-      Poeng: "01-09",
-      ForeldrUtd: "00",
-      ContentsCode: "Elever",
-      Tid: "2015",
-    });
+    expect(
+      selectCell(table, {
+        Kjonn: "0",
+        Poeng: "01-09",
+        ForeldrUtd: "00",
+        ContentsCode: "Elever",
+        Tid: "2015",
+      }),
+    ).toEqual(table.cells[0]);
   });
 
   it("rejects a snapshot whose cell count contradicts its dimensions", () => {

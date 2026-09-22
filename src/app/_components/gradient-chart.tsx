@@ -14,10 +14,16 @@
  * is drawn as its own marker below the axis, where it cannot be read as a
  * position on the y scale.
  *
- * This is a server component: it renders to static markup at build time and
- * ships no JavaScript.
+ * This component has no state and no event handlers, but it is **not** a
+ * server component: every lens that uses it is a Client Component (the
+ * selected slice lives in `useState`), so this renders inside the client
+ * boundary and its code is part of that route's client bundle. What it does
+ * keep is that the chart is present in the prerendered HTML -- no slice of
+ * it is deferred to the browser -- which is why no lens reads
+ * `useSearchParams`.
  */
 
+import { niceMax, specialValueMarker, TICK_COUNT } from "./chart-scale";
 import type { SsbCell } from "@/lib/ssb/types";
 import styles from "./gradient-chart.module.css";
 
@@ -54,43 +60,6 @@ const PLOT_HEIGHT = HEIGHT - PADDING.top - PADDING.bottom;
 /** Baseline of the lane, below the x axis, where special values are marked. */
 const MISSING_LANE_Y = PADDING.top + PLOT_HEIGHT + 20;
 const MISSING_MARKER_SPACING = 11;
-const TICK_COUNT = 4;
-
-/** The marker SSB itself prints for a special value, plus its meaning. */
-function specialValueMarker(cell: SsbCell): { symbol: string; meaning: string } | null {
-  switch (cell.kind) {
-    case "value":
-      return null;
-    case "not-applicable":
-      return { symbol: ".", meaning: "category not applicable" };
-    case "not-available":
-      return { symbol: "..", meaning: "data not available" };
-    case "confidential":
-      return { symbol: ":", meaning: "confidential" };
-  }
-}
-
-/** Gridline spacings considered "round" when picking the y axis scale. */
-const TICK_STEPS = [1, 1.25, 1.5, 2, 2.5, 3, 4, 5, 6, 7.5, 8, 10];
-
-/**
- * Smallest upper bound at or above the largest plotted value that divides
- * into `TICK_COUNT` round gridlines, so the axis reads "0, 6, 12, 18, 24"
- * rather than "0, 6.25, 12.5, ...".
- */
-export function niceMax(series: ChartSeries[]): number {
-  let max = 0;
-  for (const { points } of series) {
-    for (const cell of points) {
-      if (cell.kind === "value" && cell.value > max) max = cell.value;
-    }
-  }
-  if (max <= 0) return 1;
-  const rough = max / TICK_COUNT;
-  const magnitude = Math.pow(10, Math.floor(Math.log10(rough)));
-  const step = (TICK_STEPS.find((candidate) => candidate * magnitude >= rough) ?? 10) * magnitude;
-  return step * TICK_COUNT;
-}
 
 function formatValue(value: number, unit: string): string {
   return `${value.toFixed(1)}${unit}`;
@@ -104,7 +73,7 @@ export function GradientChart({
   unit,
   yMax,
 }: GradientChartProps) {
-  const max = yMax ?? niceMax(series);
+  const max = yMax ?? niceMax(series.flatMap((s) => s.points));
   const ticks = Array.from({ length: TICK_COUNT + 1 }, (_, i) => (i * max) / TICK_COUNT);
 
   const x = (index: number) =>

@@ -145,13 +145,13 @@ describe("countSpecialValues", () => {
     // data rather than skipped.
     const table = buildTable({
       cells: [
-        { coordinates: {}, cell: { kind: "value", value: 42 } },
-        { coordinates: {}, cell: { kind: "not-applicable" } },
-        { coordinates: {}, cell: { kind: "not-applicable" } },
-        { coordinates: {}, cell: { kind: "not-available" } },
-        { coordinates: {}, cell: { kind: "confidential" } },
-        { coordinates: {}, cell: { kind: "confidential" } },
-        { coordinates: {}, cell: { kind: "confidential" } },
+        { kind: "value", value: 42 },
+        { kind: "not-applicable" },
+        { kind: "not-applicable" },
+        { kind: "not-available" },
+        { kind: "confidential" },
+        { kind: "confidential" },
+        { kind: "confidential" },
       ],
     });
 
@@ -165,8 +165,8 @@ describe("countSpecialValues", () => {
   it("reports every kind as zero, not omitted, when a table has no special values at all", () => {
     const table = buildTable({
       cells: [
-        { coordinates: {}, cell: { kind: "value", value: 1 } },
-        { coordinates: {}, cell: { kind: "value", value: 2 } },
+        { kind: "value", value: 1 },
+        { kind: "value", value: 2 },
       ],
     });
 
@@ -222,10 +222,11 @@ describe("serializeSnapshot", () => {
         },
       },
       cells: [
-        { coordinates: { Region: "03", Tid: "2023" }, cell: { kind: "value", value: 79.4 } },
-        { coordinates: { Region: "03", Tid: "2024" }, cell: { kind: "not-applicable" } },
-        { coordinates: { Region: "50", Tid: "2023" }, cell: { kind: "not-available" } },
-        { coordinates: { Region: "50", Tid: "2024" }, cell: { kind: "confidential" } },
+        // Row-major over [Region, Tid]: 03/2023, 03/2024, 50/2023, 50/2024.
+        { kind: "value", value: 79.4 },
+        { kind: "not-applicable" },
+        { kind: "not-available" },
+        { kind: "confidential" },
       ],
     };
   }

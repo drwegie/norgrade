@@ -8,9 +8,12 @@
  * JSON module, so it is bundled at build time).
  *
  * The snapshot stores one entry per cell in flat row-major order and no
- * coordinates, so the coordinates are reconstructed from `dimensionOrder` +
- * `dimensions` using the same layout convention the parser wrote them with
- * (src/lib/ssb/layout.ts). Status markers are decoded back into the
+ * coordinates, which is also how `ParsedTable` holds them: a cell's
+ * coordinates are its position under the layout convention in
+ * src/lib/ssb/layout.ts, which `selectCell` inverts. What this decoder must
+ * therefore guarantee is that the cell *count* agrees with the dimensions,
+ * since a short or long `cells` array silently shifts every coordinate.
+ * Status markers are decoded back into the
  * `SsbCell` union rather than into `null`/`0`, which is the entire point of
  * keeping them on disk (see src/lib/ssb/types.ts).
  *
@@ -19,8 +22,7 @@
  * with shifted coordinates.
  */
 
-import { decodeFlatIndex } from "./layout";
-import type { ParsedCell, ParsedTable, SsbCell, SsbDimension } from "./types";
+import type { ParsedTable, SsbCell, SsbDimension } from "./types";
 
 /** On-disk cell encoding, mirroring `EncodedCell` in scripts/ingest-core.ts. */
 export type EncodedCell = number | "." | ".." | ":";
@@ -75,7 +77,6 @@ export function decodeSnapshot(raw: unknown): ParsedTable {
 
   const { tableId, dimensionOrder } = raw;
   const dimensions: Record<string, SsbDimension> = {};
-  const dimensionCodes: Record<string, string[]> = {};
   const size: number[] = [];
 
   for (const dimensionName of dimensionOrder) {
@@ -89,7 +90,6 @@ export function decodeSnapshot(raw: unknown): ParsedTable {
       label: dimension.label,
       categories: dimension.categories.map(({ code, label }) => ({ code, label })),
     };
-    dimensionCodes[dimensionName] = dimension.categories.map(({ code }) => code);
     size.push(dimension.categories.length);
   }
 
@@ -101,15 +101,9 @@ export function decodeSnapshot(raw: unknown): ParsedTable {
     );
   }
 
-  const cells: ParsedCell[] = new Array(expectedCells);
+  const cells: SsbCell[] = new Array(expectedCells);
   for (let flatIndex = 0; flatIndex < expectedCells; flatIndex++) {
-    const perDimIndices = decodeFlatIndex(flatIndex, size);
-    const coordinates: Record<string, string> = {};
-    perDimIndices.forEach((categoryIndex, dimPosition) => {
-      const dimensionName = dimensionOrder[dimPosition];
-      coordinates[dimensionName] = dimensionCodes[dimensionName][categoryIndex];
-    });
-    cells[flatIndex] = { coordinates, cell: decodeCell(raw.cells[flatIndex], flatIndex) };
+    cells[flatIndex] = decodeCell(raw.cells[flatIndex], flatIndex);
   }
 
   return { tableId, dimensionOrder, dimensions, cells };

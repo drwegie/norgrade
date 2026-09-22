@@ -29,6 +29,19 @@
  * current "Viken"/"Østfold" differently). We therefore classify every
  * region into a distinct kind so calling code is forced to pick one
  * boundary era instead of accidentally mixing them.
+ *
+ * DO NOT use `partitionRegions().current` to build a display set for table
+ * 14882. That classification exists for the *ingest assertion* (a negative
+ * inference has to be pinned to an enumerated set) and for a future map; it
+ * is not the set a reader should see. Measured over every cell of the
+ * committed 14882 snapshot on 2026-09-22: **the whole table is reported in
+ * the pre-2020 fylke division**, so 15 of the 17 regions with data across
+ * all six intervals carry a "(-2019)" or "(-2017)" suffix and are therefore
+ * classified `historical`. Filtering to `current` leaves 5 regions, of which
+ * Trøndelag (50) is empty in 4 of the 6 intervals. The display set for this
+ * table is `current` + `historical` together -- see
+ * src/lib/ssb/completion-regions.ts, which also handles the one place where
+ * the two eras hand over inside the table (16/17 -> 50).
  */
 
 export type RegionClassification =

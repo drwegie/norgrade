@@ -20,8 +20,10 @@ function topBracketShare(sex: string, education: string, year: string) {
 
 describe("selectCell", () => {
   it("finds the cell the flat layout puts at a coordinate", () => {
-    // Cross-checked against the same coordinate scanned linearly, so a
-    // mistake in the index arithmetic cannot pass this test.
+    // Cross-checked against the position counted out by walking the flat
+    // array in nested-loop order, which is the row-major convention written
+    // out longhand rather than as index arithmetic. A mistake in
+    // `encodeFlatIndex` therefore cannot pass this test.
     const coordinates = {
       Kjonn: "11",
       Poeng: "08",
@@ -29,11 +31,30 @@ describe("selectCell", () => {
       ContentsCode: "EleverProsent",
       Tid: "2026",
     };
-    const scanned = table.cells.find((c) =>
-      Object.entries(coordinates).every(([dim, code]) => c.coordinates[dim] === code),
-    );
+    let counted = 0;
+    let walked: (typeof table.cells)[number] | undefined;
+    for (const kjonn of table.dimensions.Kjonn.categories) {
+      for (const poeng of table.dimensions.Poeng.categories) {
+        for (const utd of table.dimensions.ForeldrUtd.categories) {
+          for (const contents of table.dimensions.ContentsCode.categories) {
+            for (const tid of table.dimensions.Tid.categories) {
+              if (
+                kjonn.code === coordinates.Kjonn &&
+                poeng.code === coordinates.Poeng &&
+                utd.code === coordinates.ForeldrUtd &&
+                contents.code === coordinates.ContentsCode &&
+                tid.code === coordinates.Tid
+              ) {
+                walked = table.cells[counted];
+              }
+              counted++;
+            }
+          }
+        }
+      }
+    }
 
-    expect(selectCell(table, coordinates)).toEqual(scanned?.cell);
+    expect(selectCell(table, coordinates)).toEqual(walked);
     expect(selectCell(table, coordinates)).toEqual({ kind: "value", value: 17.2 });
   });
 

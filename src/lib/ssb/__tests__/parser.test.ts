@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseJsonStat2, type JsonStat2Dataset } from "../parser";
+import { selectCell } from "../select";
 
 import normalFixture from "../__fixtures__/table-11689-normal.json";
 import notApplicableFixture from "../__fixtures__/table-14882-svalbard-not-applicable.json";
@@ -11,27 +12,27 @@ describe("parseJsonStat2", () => {
     const table = parseJsonStat2("11689", normalFixture as unknown as JsonStat2Dataset);
 
     expect(table.cells).toHaveLength(3);
-    expect(table.cells.map((c) => c.cell)).toEqual([
+    expect(table.cells).toEqual([
       { kind: "value", value: 67490 },
       { kind: "value", value: 32515 },
       { kind: "value", value: 34975 },
     ]);
     // Both sexes total equals males + females, per the spec's live example.
-    const [bothSexes, males, females] = table.cells.map((c) => c.cell);
+    const [bothSexes, males, females] = table.cells;
     expect(bothSexes.kind === "value" && males.kind === "value" && females.kind === "value");
     if (bothSexes.kind === "value" && males.kind === "value" && females.kind === "value") {
       expect(bothSexes.value).toBe(males.value + females.value);
     }
   });
 
-  it("decodes cell coordinates against the correct dimension categories", () => {
+  it("puts the first cell at the first category of every dimension", () => {
     const table = parseJsonStat2("11689", normalFixture as unknown as JsonStat2Dataset);
 
-    expect(table.cells[0].coordinates).toEqual({
-      Kjonn: "0",
-      Tid: "2024",
-      ContentsCode: "Elever",
-    });
+    // Coordinates are not stored per cell; they are the cell's position
+    // under the row-major layout, so this is asserted through the selector.
+    expect(selectCell(table, { Kjonn: "0", Tid: "2024", ContentsCode: "Elever" })).toEqual(
+      table.cells[0],
+    );
     expect(table.dimensions.Kjonn.categories).toEqual([
       { code: "0", label: "Both sexes" },
       { code: "1", label: "Males" },
@@ -45,11 +46,8 @@ describe("parseJsonStat2", () => {
       notApplicableFixture as unknown as JsonStat2Dataset,
     );
 
-    const svalbardCell = table.cells.find((c) => c.coordinates.Region === "21");
-    expect(svalbardCell?.cell).toEqual({ kind: "not-applicable" });
-
-    const osloCell = table.cells.find((c) => c.coordinates.Region === "03");
-    expect(osloCell?.cell).toEqual({ kind: "value", value: 79.4 });
+    expect(selectCell(table, { Region: "21", Tid: "2023", ContentsCode: "FullfortAndel" })).toEqual({ kind: "not-applicable" });
+    expect(selectCell(table, { Region: "03", Tid: "2023", ContentsCode: "FullfortAndel" })).toEqual({ kind: "value", value: 79.4 });
   });
 
   it('parses status ".." as not-available', () => {
@@ -58,8 +56,7 @@ describe("parseJsonStat2", () => {
       notAvailableFixture as unknown as JsonStat2Dataset,
     );
 
-    const trondelagCell = table.cells.find((c) => c.coordinates.Region === "50");
-    expect(trondelagCell?.cell).toEqual({ kind: "not-available" });
+    expect(selectCell(table, { Region: "50", Tid: "2013", ContentsCode: "FullfortAndel" })).toEqual({ kind: "not-available" });
   });
 
   it('parses status ":" as confidential', () => {
@@ -68,10 +65,13 @@ describe("parseJsonStat2", () => {
       confidentialFixture as unknown as JsonStat2Dataset,
     );
 
-    const topBracketCell = table.cells.find(
-      (c) => c.coordinates.Husholdningsinntekt === "10000000+",
-    );
-    expect(topBracketCell?.cell).toEqual({ kind: "confidential" });
+    expect(
+      selectCell(table, {
+        Husholdningsinntekt: "10000000+",
+        Tid: "2024",
+        ContentsCode: "Grunnskolepoeng",
+      }),
+    ).toEqual({ kind: "confidential" });
   });
 
   it("throws on a null value that carries no recognized status code", () => {
@@ -121,21 +121,16 @@ describe("parseJsonStat2", () => {
 
     expect(table.cells).toHaveLength(6);
     // Spot-check a cell in the middle of the grid, not just the edges.
-    expect(table.cells[3]).toEqual({
-      coordinates: { Region: "02", Kjonn: "1" },
-      cell: { kind: "value", value: 21 },
-    });
-    expect(table.cells.map((c) => (c.cell as { value: number }).value)).toEqual([
+    expect(table.cells[3]).toEqual({ kind: "value", value: 21 });
+    expect(table.cells.map((c) => (c as { value: number }).value)).toEqual([
       10, 11, 20, 21, 30, 31,
     ]);
-    expect(table.cells.map((c) => c.coordinates)).toEqual([
-      { Region: "01", Kjonn: "0" },
-      { Region: "01", Kjonn: "1" },
-      { Region: "02", Kjonn: "0" },
-      { Region: "02", Kjonn: "1" },
-      { Region: "03", Kjonn: "0" },
-      { Region: "03", Kjonn: "1" },
-    ]);
+    // The same layout read back through the selector, coordinate by
+    // coordinate: this is what "cells carry no coordinates" has to preserve.
+    const layout = ["01", "02", "03"].flatMap((Region) =>
+      ["0", "1"].map((Kjonn) => selectCell(table, { Region, Kjonn })),
+    );
+    expect(layout).toEqual(table.cells);
   });
 
   it("accepts status as a full array parallel to value (the other json-stat2 status shape)", () => {
@@ -149,8 +144,8 @@ describe("parseJsonStat2", () => {
 
     const table = parseJsonStat2("array-status", raw);
 
-    expect(table.cells[0].cell).toEqual({ kind: "not-applicable" });
-    expect(table.cells[1].cell).toEqual({ kind: "value", value: 5 });
+    expect(table.cells[0]).toEqual({ kind: "not-applicable" });
+    expect(table.cells[1]).toEqual({ kind: "value", value: 5 });
   });
 
   it("accepts status as a single string applying to every cell", () => {
@@ -164,10 +159,7 @@ describe("parseJsonStat2", () => {
 
     const table = parseJsonStat2("string-status", raw);
 
-    expect(table.cells.map((c) => c.cell)).toEqual([
-      { kind: "confidential" },
-      { kind: "confidential" },
-    ]);
+    expect(table.cells).toEqual([{ kind: "confidential" }, { kind: "confidential" }]);
   });
 
   // KNOWN DEFECT (see test report): the comment on `categoryCodesInOrder`
@@ -194,6 +186,6 @@ describe("parseJsonStat2", () => {
     const table = parseJsonStat2("no-index-no-label", raw);
 
     expect(table.dimensions.Mystery.categories).toEqual([{ code: "", label: "" }]);
-    expect(table.cells[0].coordinates).toEqual({ Mystery: "" });
+    expect(selectCell(table, { Mystery: "" })).toEqual({ kind: "value", value: 42 });
   });
 });

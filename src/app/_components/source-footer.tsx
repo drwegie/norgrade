@@ -20,7 +20,18 @@ export interface SourceTable {
   title: string;
 }
 
-export function SourceFooter({ tables }: { tables: SourceTable[] }) {
+export interface SourceFooterProps {
+  tables: SourceTable[];
+  /**
+   * What this page filtered the table down to, e.g. "the sexes, points
+   * bracket ... shown above". Required rather than defaulted: "the data has
+   * been modified" has to describe the modification this page actually
+   * made, and a default would quietly describe someone else's page.
+   */
+  filteredTo: string;
+}
+
+export function SourceFooter({ tables, filteredTo }: SourceFooterProps) {
   return (
     <footer className={styles.footer}>
       <h2 className={styles.heading}>Source and licence</h2>
@@ -50,10 +61,9 @@ export function SourceFooter({ tables }: { tables: SourceTable[] }) {
       </p>
       <p>
         <strong>The data has been modified.</strong> The figures were retrieved from SSB&rsquo;s
-        PxWebApi, restructured, and filtered down to the sexes, points bracket, parental education
-        levels and years shown above; the charts are this app&rsquo;s own. Figures themselves are
-        reproduced as published: no rounding, rescaling or imputation is applied. SSB is not
-        responsible for this app and does not endorse it.
+        PxWebApi, restructured, and filtered down to {filteredTo}; the charts are this app&rsquo;s
+        own. Figures themselves are reproduced as published: no rounding, rescaling or imputation is
+        applied. SSB is not responsible for this app and does not endorse it.
       </p>
     </footer>
   );

@@ -1,5 +1,4 @@
-import { decodeFlatIndex } from "./layout";
-import type { ParsedCell, ParsedTable, SsbCell, SsbDimension } from "./types";
+import type { ParsedTable, SsbCell, SsbDimension } from "./types";
 
 /**
  * Minimal typing for the subset of json-stat2 that SSB's PxWebApi v2
@@ -92,7 +91,6 @@ function toSsbCell(rawValue: number | null, statusCode: string | undefined): Ssb
 /** Parses a raw json-stat2 dataset from SSB's PxWebApi v2 into a typed, decoded table. */
 export function parseJsonStat2(tableId: string, raw: JsonStat2Dataset): ParsedTable {
   const dimensionOrder = raw.id;
-  const dimensionCodes: Record<string, string[]> = {};
   const dimensions: Record<string, SsbDimension> = {};
 
   for (const dimName of dimensionOrder) {
@@ -101,7 +99,6 @@ export function parseJsonStat2(tableId: string, raw: JsonStat2Dataset): ParsedTa
       throw new Error(`Missing dimension metadata for "${dimName}"`);
     }
     const codes = categoryCodesInOrder(dim);
-    dimensionCodes[dimName] = codes;
     dimensions[dimName] = {
       label: dim.label ?? dimName,
       categories: codes.map((code) => ({
@@ -111,19 +108,13 @@ export function parseJsonStat2(tableId: string, raw: JsonStat2Dataset): ParsedTa
     };
   }
 
+  // Cells keep json-stat2's own flat, row-major order (src/lib/ssb/layout.ts);
+  // a cell's coordinates are its position, not a field on it.
   const totalCells = raw.size.reduce((a, b) => a * b, 1);
-  const cells: ParsedCell[] = new Array(totalCells);
+  const cells: SsbCell[] = new Array(totalCells);
 
   for (let flatIndex = 0; flatIndex < totalCells; flatIndex++) {
-    const perDimIndices = decodeFlatIndex(flatIndex, raw.size);
-    const coordinates: Record<string, string> = {};
-    perDimIndices.forEach((categoryIndex, dimPosition) => {
-      const dimName = dimensionOrder[dimPosition];
-      coordinates[dimName] = dimensionCodes[dimName][categoryIndex];
-    });
-
-    const cell = toSsbCell(raw.value[flatIndex], statusForIndex(raw.status, flatIndex));
-    cells[flatIndex] = { coordinates, cell };
+    cells[flatIndex] = toSsbCell(raw.value[flatIndex], statusForIndex(raw.status, flatIndex));
   }
 
   return { tableId, dimensionOrder, dimensions, cells };

@@ -124,7 +124,7 @@ export interface SpecialValueCounts {
  */
 export function countSpecialValues(table: ParsedTable): SpecialValueCounts {
   const counts: SpecialValueCounts = { notApplicable: 0, notAvailable: 0, confidential: 0 };
-  for (const { cell } of table.cells) {
+  for (const cell of table.cells) {
     switch (cell.kind) {
       case "not-applicable":
         counts.notApplicable++;
@@ -218,7 +218,7 @@ export function serializeSnapshot(table: ParsedTable): string {
     dimensions,
     // Flat, row-major (last dimension varies fastest), same order as the
     // json-stat2 `value` array and as ParsedTable.cells.
-    cells: table.cells.map(({ cell }) => encodeCell(cell)),
+    cells: table.cells.map(encodeCell),
   };
 
   return `${JSON.stringify(snapshot, null, 2)}\n`;

@@ -45,10 +45,23 @@ function categoryIndices(table: ParsedTable, coordinates: Record<string, string>
   return { indices, size };
 }
 
+/**
+ * SSB's own label for one category. Throws on an unknown code instead of
+ * falling back to the code itself, so a category SSB renames or retires
+ * fails the build rather than putting a raw code on screen.
+ */
+export function categoryLabel(table: ParsedTable, dimension: string, code: string): string {
+  const category = table.dimensions[dimension]?.categories.find((c) => c.code === code);
+  if (!category) {
+    throw new Error(`Table ${table.tableId}: dimension "${dimension}" has no category "${code}"`);
+  }
+  return category.label;
+}
+
 /** Returns the single cell at a fully specified coordinate. */
 export function selectCell(table: ParsedTable, coordinates: Record<string, string>): SsbCell {
   const { indices, size } = categoryIndices(table, coordinates);
-  return table.cells[encodeFlatIndex(indices, size)].cell;
+  return table.cells[encodeFlatIndex(indices, size)];
 }
 
 /**
