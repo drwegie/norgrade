@@ -1,0 +1,21 @@
+.footer {
+  border-top: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+  padding-top: 1rem;
+  display: grid;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  opacity: 0.85;
+}
+
+.heading {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.7;
+}
+
+.footer a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

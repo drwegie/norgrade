@@ -4,18 +4,40 @@ A Next.js app that visualizes Norway's **socioeconomic gradient in school
 achievement** — how much parental education and household income relate to
 grade point averages and upper secondary school completion rates.
 
-## Why
+## Why, when Udir already publishes school statistics?
 
-Udir (the Norwegian Directorate for Education and Training) already
-publishes a school statistics dashboard (Skoleporten), but its cut is
-per-school/per-subject performance. This app's angle is different: it
-follows a single question — grades and completion rates broken down by
-parents' education level and household income — across SSB's tables, which
-Skoleporten does not surface as its primary view.
+Udir (the Norwegian Directorate for Education and Training) publishes
+Norway's school statistics, including grunnskolepoeng, and it is the
+authoritative source for how schools perform. This app does not try to be a
+better version of that, and does not claim to show anything Udir could not
+show.
 
-**This increment implements the ETL layer (SSB API client, response parser,
-and caching), its tests, and the ingest script that writes the committed
-data snapshots. There is no UI yet.**
+What it is instead is one question, followed all the way down:
+
+- **One question, not a catalogue.** "How much do a pupil's results track
+  their parents' education?" — nothing else. There is no school picker, no
+  subject browser and no municipality drilldown, because every one of them
+  would dilute the comparison the page exists to make.
+- **The breakdown is the point.** The pupil-level background variables
+  (parents' education, household income, parents' labour market status) live
+  in SSB's tables, not in Udir's per-school reporting. This app's home page
+  is built on SSB table 11689 and is a view of that breakdown alone.
+- **Missing data stays missing.** SSB distinguishes "." (not applicable),
+  ".." (not available) and ":" (confidential). The ETL layer keeps the three
+  apart and the chart refuses to draw any of them as a value: the line
+  breaks and SSB's own marker is printed below the axis. A dashboard that
+  silently plots those as zero would show a gradient that is steeper than
+  the data supports.
+
+`UNVERIFIED:` whether Udir's current statistics portal offers the same
+breakdown by parents' education was **not** checked against udir.no for this
+increment. The claim above is only about where the source data sits (SSB's
+tables), which is verified, not about what Udir's UI does or does not offer.
+
+**This increment adds the snapshot decoder and the first UI: a statically
+prerendered home page charting the gradient, with its CC BY attribution.**
+The ETL layer (SSB API client, response parser, caching) and the ingest
+script that writes the committed snapshots were in place before it.
 
 ## Data source
 
@@ -75,8 +97,12 @@ terms permitting its use.
 The snapshots in `data/ssb/` are themselves a modified redistribution of
 SSB's data, so they carry their own attribution alongside them in
 [`data/ssb/NOTICE.md`](data/ssb/NOTICE.md), which names all four tables and
-states exactly what ingest changed. The UI attribution above is still
-outstanding, because there is no UI yet.
+states exactly what ingest changed.
+
+In the UI, this is `src/app/_components/source-footer.tsx`. It takes the
+tables the page actually reads as a prop and lists only those — the home
+page uses table 11689 only, so the footer names 11689 only, not all four
+snapshots in the repo.
 
 ## ETL layer design notes
 
@@ -93,6 +119,37 @@ outstanding, because there is no UI yet.
   neither has a fylke boundary), or `aggregate` (the "I alt" total), so
   callers building a map are structurally forced to pick one boundary era
   instead of mixing old and new fylker on the same choropleth.
+
+## UI
+
+The home page (`src/app/page.tsx`) charts **the share of pupils reaching the
+top grunnskolepoeng bracket ("55 point or more"), by their parents' highest
+completed education**, for girls and boys separately, over every year in
+table 11689.
+
+- **It reads the snapshot at build time.** The page imports
+  `data/ssb/11689.json` as a JSON module and decodes it with
+  `decodeSnapshot` (`src/lib/ssb/snapshot.ts`), the inverse of the
+  serializer in `scripts/ingest-core.ts`. Nothing on the request path calls
+  `fetchTable`, and `next build` reports the route as `○ (Static)`.
+- **The chart is inline SVG with no charting dependency.**
+  `src/app/_components/gradient-chart.tsx` is a server component: a few
+  polylines, no client JavaScript, no new entry in `package.json`.
+- **`next/image` is not used** anywhere, so `next`'s optional
+  `@img/sharp-libvips-*` binaries (LGPL-3.0-or-later) never become part of
+  what is deployed.
+- **Special values break the line.** The chart takes `SsbCell`s rather than
+  numbers, so it cannot render a `..` as a `0`; each one is drawn as SSB's
+  own marker in a lane below the x axis and listed underneath the chart.
+  Table 11689 currently has one such cell in the plotted slice: boys whose
+  parents have basic school only, top bracket, 2026, `..` (not available).
+- **Both panels share one y axis**, so girls and boys can be compared by
+  eye.
+
+The only arithmetic the app performs on SSB's figures is the ratio quoted in
+the page's opening paragraph (highest over lowest parental education level,
+latest year, both sexes), and the page says so in the same sentence.
+Everything else on screen is a published figure.
 
 ## Ingest
 

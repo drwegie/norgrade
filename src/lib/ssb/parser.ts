@@ -1,3 +1,4 @@
+import { decodeFlatIndex } from "./layout";
 import type { ParsedCell, ParsedTable, SsbCell, SsbDimension } from "./types";
 
 /**
@@ -40,18 +41,6 @@ export interface JsonStat2Dimension {
 const STATUS_NOT_APPLICABLE = ".";
 const STATUS_NOT_AVAILABLE = "..";
 const STATUS_CONFIDENTIAL = ":";
-
-/** Decodes a flat, row-major (last dimension fastest) index into per-dimension indices. */
-function decodeFlatIndex(flatIndex: number, size: number[]): number[] {
-  const indices = new Array<number>(size.length);
-  let remainder = flatIndex;
-  for (let d = size.length - 1; d >= 0; d--) {
-    const dimSize = size[d];
-    indices[d] = remainder % dimSize;
-    remainder = Math.floor(remainder / dimSize);
-  }
-  return indices;
-}
 
 /** Returns the category codes for a dimension, ordered by their category index. */
 function categoryCodesInOrder(dim: JsonStat2Dimension): string[] {

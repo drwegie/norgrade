@@ -1,0 +1,92 @@
+.figure {
+  margin: 0;
+  padding: 1rem 1rem 0.75rem;
+  border: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+  border-radius: 10px;
+}
+
+.caption {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+/* Axis, grid and labels inherit the page colour so the chart follows the
+   light/dark colour scheme without a second palette. */
+.grid {
+  stroke: currentColor;
+  stroke-opacity: 0.12;
+  stroke-width: 1;
+}
+
+.axis {
+  stroke: currentColor;
+  stroke-opacity: 0.45;
+  stroke-width: 1;
+}
+
+.tickLabel {
+  fill: currentColor;
+  fill-opacity: 0.65;
+  font-size: 11px;
+}
+
+.line {
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.missingMarker {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.legend {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+}
+
+.legendItem {
+  display: grid;
+  grid-template-columns: 0.75rem 1fr auto;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.swatch {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 2px;
+}
+
+.legendLabel {
+  min-width: 0;
+}
+
+.legendValue {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.legendYear {
+  opacity: 0.6;
+}
+
+.missingNote {
+  margin: 0.75rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  opacity: 0.75;
+}
