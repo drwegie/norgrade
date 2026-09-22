@@ -172,6 +172,14 @@ parental education level, latest year, both sexes; both read it from the
 same function in `src/app/education/table-11689.ts`), and both pages say so
 in the same breath. Everything else on screen is a published figure.
 
+## Licence
+
+The code in this repository is MIT licensed; see [LICENSE](LICENSE).
+
+That covers the code only. The data under `data/ssb/` is Statistics
+Norway's and stays under CC BY 4.0 — see [data/ssb/NOTICE.md](data/ssb/NOTICE.md)
+for the attribution it requires and for what this repository changed.
+
 ## Ingest
 
 `npm run ingest` is the only thing in this repo that makes an HTTP request
