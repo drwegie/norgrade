@@ -1,4 +1,4 @@
-# skolegradient
+# norgrade
 
 A Next.js app that visualizes Norway's **socioeconomic gradient in school
 achievement** — how much parental education and household income relate to
