@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
+    "ingest": "tsc -p scripts/tsconfig.json && node .ingest-build/scripts/ingest.js",
     "test:watch": "vitest"
   },
   "dependencies": {

@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Compiled output of the ingest script (see scripts/tsconfig.json).
+    ".ingest-build/**",
   ]),
 ]);
 

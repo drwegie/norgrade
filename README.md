@@ -13,8 +13,9 @@ follows a single question — grades and completion rates broken down by
 parents' education level and household income — across SSB's tables, which
 Skoleporten does not surface as its primary view.
 
-**This increment implements only the ETL layer (SSB API client, response
-parser, and caching) and its tests. There is no UI yet.**
+**This increment implements the ETL layer (SSB API client, response parser,
+and caching), its tests, and the ingest script that writes the committed
+data snapshots. There is no UI yet.**
 
 ## Data source
 
@@ -87,6 +88,42 @@ terms permitting its use.
   callers building a map are structurally forced to pick one boundary era
   instead of mixing old and new fylker on the same choropleth.
 
+## Ingest
+
+`npm run ingest` is the only thing in this repo that makes an HTTP request
+to SSB. It fetches the four tables **sequentially** (with an explicit
+per-request timeout, since Node's `fetch` has none) and writes one snapshot
+per table to `data/ssb/<tableId>.json`, which is committed. Cloud
+persistence has not been approved, so this is ADR-001's "commit a JSON
+snapshot instead" branch; the app reads only from these files.
+
+The script is TypeScript compiled to `.ingest-build/` by `tsc` (already a
+devDependency) and then run with plain `node` — no TypeScript runner
+dependency is added.
+
+Two things the script guarantees:
+
+- **It asserts the `current` region set per table.** `region.ts` infers
+  "current" from the *absence* of a `(-YYYY)` suffix, a negative inference,
+  so ingest compares the resulting code set against an explicitly enumerated
+  expectation (table 14882: `03`, `11`, `15`, `18`, `50`) and exits non-zero
+  listing exactly which codes appeared or disappeared. A table that gains or
+  loses its Region dimension fails the same way.
+- **Its output is deterministic.** Nothing clock-derived is written and key
+  order is fixed, so re-running ingest on unchanged data produces a
+  byte-identical file and a real SSB revision produces a reviewable diff.
+
+On an assertion failure the script still writes every snapshot before
+exiting non-zero, so that the offending diff can be inspected. **The exit
+code, not the presence of the files, is the signal.** If ingest is ever
+automated, the job must gate the commit on that exit code — writing the
+files is not a statement that they are correct.
+
+Cells are stored flat, in the same row-major order as json-stat2's `value`
+array (decodable with `dimensionOrder` + `dimensions`), and each one is
+either a number or the SSB status marker `"."` / `".."` / `":"` — the
+special values are preserved on disk, not flattened to `null`.
+
 ## Local development
 
 Requires Node.js 22+.
@@ -95,6 +132,7 @@ Requires Node.js 22+.
 npm install
 npm run dev      # start the dev server at http://localhost:3000
 npm test         # run the ETL test suite (no network access required)
+npm run ingest   # refresh data/ssb/*.json from SSB (the only networked step)
 npm run build    # production build
 npm run lint     # eslint
 ```

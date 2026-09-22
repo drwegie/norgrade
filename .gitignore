@@ -20,6 +20,9 @@
 # production
 /build
 
+# ingest script build output (see scripts/tsconfig.json)
+/.ingest-build
+
 # misc
 .DS_Store
 *.pem

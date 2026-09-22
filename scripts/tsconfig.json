@@ -1,0 +1,16 @@
+{
+  // The repo has no TypeScript runner dependency and Node's type stripping
+  // cannot resolve the extensionless relative imports used in src/lib/ssb,
+  // so the ingest script is compiled to CommonJS with the TypeScript already
+  // present as a devDependency, then run with plain `node`. Output goes to
+  // .ingest-build/ (gitignored); tsc follows the imports from ingest.ts.
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "noEmit": false,
+    "incremental": false,
+    "outDir": "../.ingest-build"
+  },
+  "include": ["ingest.ts"]
+}
