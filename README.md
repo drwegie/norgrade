@@ -72,6 +72,12 @@ show all three of:
 The SSB logo is not used anywhere in this app, since SSB does not publish
 terms permitting its use.
 
+The snapshots in `data/ssb/` are themselves a modified redistribution of
+SSB's data, so they carry their own attribution alongside them in
+[`data/ssb/NOTICE.md`](data/ssb/NOTICE.md), which names all four tables and
+states exactly what ingest changed. The UI attribution above is still
+outstanding, because there is no UI yet.
+
 ## ETL layer design notes
 
 - **Special values are never collapsed to `null`/`0`.** SSB's json-stat2
