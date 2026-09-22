@@ -1,0 +1,16 @@
+.carried {
+  font-size: 0.85rem;
+  max-width: 46rem;
+  padding: 0.5rem 0.75rem;
+  border-left: 3px solid color-mix(in srgb, currentColor 35%, transparent);
+  background: color-mix(in srgb, currentColor 5%, transparent);
+  border-radius: 0 8px 8px 0;
+}
+
+.tag {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.7;
+}

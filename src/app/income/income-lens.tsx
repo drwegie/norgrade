@@ -9,6 +9,7 @@
  */
 
 import { BackgroundLens } from "../_components/background-lens";
+import { LENS_LABELS } from "../_components/lenses";
 import { decodeSnapshot } from "@/lib/ssb/snapshot";
 
 import snapshot13716 from "../../../data/ssb/13716.json";
@@ -29,6 +30,7 @@ export function IncomeLens() {
   return (
     <BackgroundLens
       table={table}
+      lens={LENS_LABELS.income}
       title="Does money move the line, once education is held still?"
       lede={
         <>

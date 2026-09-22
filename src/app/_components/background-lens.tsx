@@ -11,36 +11,37 @@
  * snapshot and passes the decoded table in, which is what keeps one
  * table's cells out of the other route's client chunk.
  *
- * The selected slice is `useState` here; the route segment is the URL. See
+ * The route segment is the URL; the slice is client state. The two
+ * dimensions these tables share with the others -- sex and parents'
+ * education, whose codes are identical in 11689, 13716 and 13717 (measured;
+ * see ./shared-dimensions.ts) -- come from the shared selection rather than
+ * from local `useState`, so a cross-section chosen on another lens is still
+ * there on arrival. The breakdown dimension stays private to the route,
+ * because no other table has it. See
  * docs/adr/ADR-002-exploration-surface.md.
  */
 
-import { useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
+import { CarriedSelection } from "./carried-selection";
 import { ControlGroup } from "./control-group";
 import { GradientChart, type ChartSeries } from "./gradient-chart";
+import { useSharedSelection } from "./selection-context";
+import {
+  EDUCATION_SHORT_LABELS,
+  SHARED_EDUCATION_CODES,
+  SHARED_SEX_CODES,
+  type SharedEducationCode,
+  type SharedSexCode,
+} from "./shared-dimensions";
 import { tableOptions } from "./table-options";
 import { categoryLabel, selectSeries } from "@/lib/ssb/select";
 import type { ParsedTable } from "@/lib/ssb/types";
 import styles from "./lens-page.module.css";
 
-/** Both tables publish these, with identical category codes. */
-const SEX_CODES = ["0", "11", "10"] as const;
-/**
- * "00" (all levels) first, then the four real levels. The residual "99
- * Unknown" is omitted: it is not a level of education.
- */
-const EDUCATION_CODES = ["00", "01", "02b", "03b", "03c"] as const;
-
-const EDUCATION_SHORT_LABELS: Record<string, string> = {
-  "00": "All levels",
-  "01": "Basic school",
-  "02b": "Upper secondary",
-  "03b": "Tertiary, ≤ 4 years",
-  "03c": "Tertiary, > 4 years",
-};
-
 export interface BackgroundLensProps {
   table: ParsedTable;
+  /** Lens label, used to say where a carried-over choice came from. */
+  lens: string;
   title: string;
   lede: ReactNode;
   /** The dimension drawn as one line per category. */
@@ -62,6 +63,7 @@ export interface BackgroundLensProps {
 
 export function BackgroundLens({
   table,
+  lens,
   title,
   lede,
   breakdown,
@@ -69,8 +71,8 @@ export function BackgroundLens({
   measure,
   notes,
 }: BackgroundLensProps) {
-  const [sex, setSex] = useState<string>(SEX_CODES[0]);
-  const [education, setEducation] = useState<string>(EDUCATION_CODES[0]);
+  const { sex, sexChosenOn, chooseSex, education, educationChosenOn, chooseEducation } =
+    useSharedSelection();
 
   const years = table.dimensions.Tid.categories.map((category) => category.label);
   const series: ChartSeries[] = breakdown.codes.map((code, index) => ({
@@ -95,21 +97,48 @@ export function BackgroundLens({
         <p className={styles.lede}>{lede}</p>
       </header>
 
+      <CarriedSelection
+        currentLens={lens}
+        items={[
+          {
+            from: sexChosenOn,
+            description: (
+              <>
+                pupils, <strong>{sexLabel}</strong>
+              </>
+            ),
+          },
+          {
+            from: educationChosenOn,
+            description: (
+              <>
+                parents&rsquo; education, <strong>{educationLabel.toLowerCase()}</strong>
+              </>
+            ),
+          },
+        ]}
+      />
+
       <div className={styles.controls}>
         <h2 className={styles.controlsHeading}>Choose a cross-section</h2>
         <ControlGroup
           name="sex"
           legend="Pupils"
-          options={tableOptions(table, "Kjonn", SEX_CODES)}
+          options={tableOptions(table, "Kjonn", SHARED_SEX_CODES)}
           value={sex}
-          onChange={setSex}
+          onChange={(code) => chooseSex(code as SharedSexCode, lens)}
         />
         <ControlGroup
           name="education"
           legend="Parents' highest completed education"
-          options={tableOptions(table, "ForeldrUtd", EDUCATION_CODES, EDUCATION_SHORT_LABELS)}
+          options={tableOptions(
+            table,
+            "ForeldrUtd",
+            SHARED_EDUCATION_CODES,
+            EDUCATION_SHORT_LABELS,
+          )}
           value={education}
-          onChange={setEducation}
+          onChange={(code) => chooseEducation(code as SharedEducationCode, lens)}
         />
       </div>
 

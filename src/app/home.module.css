@@ -1,0 +1,110 @@
+.figure {
+  display: grid;
+  gap: 0.4rem;
+  padding: 1rem 1.15rem;
+  border: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+  border-radius: 10px;
+  max-width: 46rem;
+}
+
+.figureHeading,
+.lensesHeading,
+.provenanceHeading {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.7;
+}
+
+.figureNumber {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: clamp(2rem, 7vw, 3rem);
+  line-height: 1.1;
+}
+
+.figureBody {
+  font-size: 1rem;
+}
+
+.figureNote {
+  font-size: 0.8rem;
+  opacity: 0.85;
+}
+
+.figureNote a,
+.provenance a {
+  text-decoration: underline;
+}
+
+.lenses {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.lensList {
+  list-style: none;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 48rem) {
+  .lensList {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.lensCard {
+  height: 100%;
+  display: grid;
+  gap: 0.25rem;
+  align-content: start;
+  padding: 0.9rem 1rem;
+  border: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+  border-radius: 10px;
+}
+
+.lensCard:hover {
+  border-color: color-mix(in srgb, currentColor 45%, transparent);
+  background: color-mix(in srgb, currentColor 5%, transparent);
+}
+
+.lensLabel {
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.lensQuestion {
+  font-size: 0.9rem;
+}
+
+.lensSummary {
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+.lensTable {
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  opacity: 0.6;
+}
+
+.lensesNote {
+  font-size: 0.85rem;
+  max-width: 46rem;
+}
+
+.provenance {
+  display: grid;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  max-width: 46rem;
+}
+
+.provenance ul {
+  display: grid;
+  gap: 0.4rem;
+  padding-left: 1.1rem;
+  list-style: disc;
+}

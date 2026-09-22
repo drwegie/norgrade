@@ -20,8 +20,8 @@ What it is instead is one question, followed all the way down:
   would dilute the comparison the page exists to make.
 - **The breakdown is the point.** The pupil-level background variables
   (parents' education, household income, parents' labour market status) live
-  in SSB's tables, not in Udir's per-school reporting. This app's home page
-  is built on SSB table 11689 and is a view of that breakdown alone.
+  in SSB's tables, not in Udir's per-school reporting. Each of this app's
+  four lenses is a view of one of those tables alone.
 - **Missing data stays missing.** SSB distinguishes "." (not applicable),
   ".." (not available) and ":" (confidential). The ETL layer keeps the three
   apart and the chart refuses to draw any of them as a value: the line
@@ -34,10 +34,12 @@ breakdown by parents' education was **not** checked against udir.no for this
 increment. The claim above is only about where the source data sits (SSB's
 tables), which is verified, not about what Udir's UI does or does not offer.
 
-**This increment adds the snapshot decoder and the first UI: a statically
-prerendered home page charting the gradient, with its CC BY attribution.**
-The ETL layer (SSB API client, response parser, caching) and the ingest
-script that writes the committed snapshots were in place before it.
+**This increment adds an entry page at `/`, moves the parents' education
+lens to `/education`, and lets a chosen sex and parental education level
+follow the reader from one lens to the next.** The snapshot decoder, the
+four lenses and their CC BY attribution, the ETL layer (SSB API client,
+response parser, caching) and the ingest script that writes the committed
+snapshots were in place before it.
 
 ## Data source
 
@@ -100,9 +102,10 @@ SSB's data, so they carry their own attribution alongside them in
 states exactly what ingest changed.
 
 In the UI, this is `src/app/_components/source-footer.tsx`. It takes the
-tables the page actually reads as a prop and lists only those — the home
-page uses table 11689 only, so the footer names 11689 only, not all four
-snapshots in the repo.
+tables the page actually reads as a prop and lists only those — the
+`/education` lens uses table 11689 only, so its footer names 11689 only,
+not all four snapshots in the repo. The entry page at `/` quotes one figure
+from 11689 and therefore names 11689, and nothing else.
 
 ## ETL layer design notes
 
@@ -122,19 +125,36 @@ snapshots in the repo.
 
 ## UI
 
-The home page (`src/app/page.tsx`) charts **the share of pupils reaching the
-top grunnskolepoeng bracket ("55 point or more"), by their parents' highest
-completed education**, for girls and boys separately, over every year in
+`/` is the entry page: what the app asks, a link to each of the four lenses,
+where the figures come from and how fresh they are, and one headline figure
+from table 11689 (named, with its exact cross-section, on the page). Each
+lens is its own route and its own table — `/education` (11689), `/income`
+(13716), `/work` (13717), `/completion` (14882). See
+[ADR-002](docs/adr/ADR-002-exploration-surface.md).
+
+The `/education` lens (`src/app/education/`) charts **the share of pupils in
+a chosen grunnskolepoeng bracket, by their parents' highest completed
+education**, for girls and boys separately by default, over every year in
 table 11689.
 
-- **It reads the snapshot at build time.** The page imports
+- **It reads the snapshot at build time.** The lens imports
   `data/ssb/11689.json` as a JSON module and decodes it with
   `decodeSnapshot` (`src/lib/ssb/snapshot.ts`), the inverse of the
   serializer in `scripts/ingest-core.ts`. Nothing on the request path calls
-  `fetchTable`, and `next build` reports the route as `○ (Static)`.
+  `fetchTable`, and `next build` reports every route as `○ (Static)`.
+- **A chosen cross-section follows the reader between lenses.** Sex and
+  parents' education are held in a React context in the root layout, not in
+  the URL, and each lens says on the page when a value was carried in from
+  another one. The two dimensions were checked against the snapshots before
+  being shared: `ForeldrUtd` is identical in 11689/13716/13717 and absent
+  from 14882, while `Kjonn` is `0/11/10` in those three but `0/2/1` in
+  14882, so the sex is translated rather than passed through
+  (`src/app/_components/shared-dimensions.ts`).
 - **The chart is inline SVG with no charting dependency.**
-  `src/app/_components/gradient-chart.tsx` is a server component: a few
-  polylines, no client JavaScript, no new entry in `package.json`.
+  `src/app/_components/gradient-chart.tsx` is a few polylines, no charting
+  library and no new entry in `package.json`. It renders inside a client
+  boundary (the lens owns the selected slice) but is present in the
+  prerendered HTML.
 - **`next/image` is not used** anywhere, so `next`'s optional
   `@img/sharp-libvips-*` binaries (LGPL-3.0-or-later) never become part of
   what is deployed.
@@ -147,9 +167,10 @@ table 11689.
   eye.
 
 The only arithmetic the app performs on SSB's figures is the ratio quoted in
-the page's opening paragraph (highest over lowest parental education level,
-latest year, both sexes), and the page says so in the same sentence.
-Everything else on screen is a published figure.
+the lens's opening paragraph and on the entry page (highest over lowest
+parental education level, latest year, both sexes; both read it from the
+same function in `src/app/education/table-11689.ts`), and both pages say so
+in the same breath. Everything else on screen is a published figure.
 
 ## Ingest
 

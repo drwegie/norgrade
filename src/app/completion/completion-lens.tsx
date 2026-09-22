@@ -9,6 +9,14 @@
  * (docs/adr/ADR-002-exploration-surface.md). It is the biggest of the four
  * and the reason the "one page with all the data" option was rejected.
  *
+ * Sex is taken from the shared selection so it survives arriving from
+ * another lens -- but this table does not number the sexes the way the
+ * other three do (`0/2/1` against `0/11/10`, measured; see
+ * ../_components/shared-dimensions.ts), so the code is translated rather
+ * than passed through. Parents' education is not a dimension of 14882 at
+ * all, so a level chosen elsewhere is held for the other lenses and never
+ * applied here; the notes below say so.
+ *
  * The region set is built by `completionRegions`, not by
  * `partitionRegions().current`: this table is reported in the pre-2020
  * fylke division, and the one handover inside it (Sør-/Nord-Trøndelag ->
@@ -17,8 +25,17 @@
  */
 
 import { useState } from "react";
+import { CarriedSelection } from "../_components/carried-selection";
 import { ControlGroup } from "../_components/control-group";
+import { LENS_LABELS } from "../_components/lenses";
 import { RegionBars } from "../_components/region-bars";
+import { useSharedSelection } from "../_components/selection-context";
+import {
+  SEX_CODE_IN_14882,
+  SHARED_SEX_CODE_FROM_14882,
+  SHARED_SEX_CODES,
+  EDUCATION_SHORT_LABELS,
+} from "../_components/shared-dimensions";
 import { tableOptions } from "../_components/table-options";
 import {
   completionRegions,
@@ -32,6 +49,8 @@ import styles from "../_components/lens-page.module.css";
 import snapshot14882 from "../../../data/ssb/14882.json";
 
 const table = decodeSnapshot(snapshot14882);
+
+const LENS = LENS_LABELS.completion;
 
 /** Per cent of the cohort, as published; the sibling `Personer` is a head count. */
 const CONTENTS_CODE = "Prosent";
@@ -61,7 +80,8 @@ const OUTCOME_SHORT_LABELS: Record<string, string> = {
   "9": "Dropped out",
 };
 
-const SEX_CODES = ["0", "2", "1"] as const;
+/** This table's own sex codes, in the order the other lenses list them. */
+const SEX_CODES = SHARED_SEX_CODES.map((code) => SEX_CODE_IN_14882[code]);
 
 const INTERVALS = table.dimensions.Tid.categories.map((category) => category.code);
 const DEFAULT_INTERVAL = INTERVALS[INTERVALS.length - 1];
@@ -80,9 +100,11 @@ function byValueDescending(a: RegionBar, b: RegionBar): number {
 }
 
 export function CompletionLens() {
+  const { sex: sharedSex, sexChosenOn, chooseSex, education, educationChosenOn } =
+    useSharedSelection();
   const [period, setPeriod] = useState<string>(DEFAULT_INTERVAL);
   const [outcome, setOutcome] = useState<string>(OUTCOME_CODES[0]);
-  const [sex, setSex] = useState<string>(SEX_CODES[0]);
+  const sex = SEX_CODE_IN_14882[sharedSex];
 
   const { bars, notApplicable, handover } = completionRegions(table, {
     FullforingVGO: outcome,
@@ -111,6 +133,33 @@ export function CompletionLens() {
         </p>
       </header>
 
+      <CarriedSelection
+        currentLens={LENS}
+        items={[
+          {
+            from: sexChosenOn,
+            description: (
+              <>
+                pupils, <strong>{categoryLabel(table, "Kjonn", sex)}</strong> &mdash; SSB&rsquo;s
+                wording for that group in this table
+              </>
+            ),
+          },
+          {
+            from: educationChosenOn,
+            description: (
+              <>
+                parents&rsquo; education, <strong>
+                  {EDUCATION_SHORT_LABELS[education] ?? education}
+                </strong>{" "}
+                &mdash; table 14882 does not break the cohort down by it, so the choice is held for
+                the other lenses rather than applied here
+              </>
+            ),
+          },
+        ]}
+      />
+
       <div className={styles.controls}>
         <h2 className={styles.controlsHeading}>Choose a cross-section</h2>
         <ControlGroup
@@ -132,7 +181,7 @@ export function CompletionLens() {
           legend="Pupils"
           options={SEX_OPTIONS}
           value={sex}
-          onChange={setSex}
+          onChange={(code) => chooseSex(SHARED_SEX_CODE_FROM_14882[code], LENS)}
         />
       </div>
 
@@ -205,6 +254,11 @@ export function CompletionLens() {
             ) : null}
             . &ldquo;..&rdquo; (not available) and &ldquo;:&rdquo; (confidential) stay in the chart
             and are printed as SSB&rsquo;s own marker where the bar would have ended.
+          </li>
+          <li>
+            This table has no parents&rsquo; education, so a level chosen on the other lenses
+            cannot be applied here. It is held rather than discarded: going back to one of those
+            lenses finds it still selected.
           </li>
           <li>
             Svalbard and &ldquo;Abroad&rdquo; are not counties and the national total is not a

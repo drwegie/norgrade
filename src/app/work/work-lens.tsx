@@ -10,6 +10,7 @@
  */
 
 import { BackgroundLens } from "../_components/background-lens";
+import { LENS_LABELS } from "../_components/lenses";
 import { decodeSnapshot } from "@/lib/ssb/snapshot";
 
 import snapshot13717 from "../../../data/ssb/13717.json";
@@ -36,6 +37,7 @@ export function WorkLens() {
   return (
     <BackgroundLens
       table={table}
+      lens={LENS_LABELS.work}
       title="And how many adults at home go to work?"
       lede={
         <>
